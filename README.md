@@ -58,6 +58,13 @@ src-tauri/target/release/bundle/macos/Gifsmith.app
 src-tauri/target/release/bundle/dmg/Gifsmith_1.0.0_*.dmg
 ```
 
+The current build is also copied to the repository-root `release/` folder for easy access:
+
+```
+release/Gifsmith_1.0.0_aarch64.dmg
+release/Gifsmith.app
+```
+
 The bundle is unsigned, so first launch may require right-click → Open.
 
 ## Using Gifsmith
