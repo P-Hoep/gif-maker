@@ -1,0 +1,36 @@
+[package]
+name = "gifsmith"
+version = "1.0.0"
+description = "Turn videos into beautiful, share-ready GIFs."
+authors = ["Patrick Hoepner"]
+license = "MIT"
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "gifsmith_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+image = { version = "0.25", default-features = false, features = ["png"] }
+imageproc = { version = "0.25", default-features = false }
+ab_glyph = "0.2"
+base64 = "0.22"
+tempfile = "3"
+walkdir = "2"
+libc = "0.2"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
