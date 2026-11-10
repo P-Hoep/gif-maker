@@ -1,4 +1,4 @@
-import { Film, FolderPlus, LoaderCircle, Plus, Trash2 } from "lucide-react";
+import { FileImage, Film, FolderPlus, LoaderCircle, Plus, Trash2 } from "lucide-react";
 import type { ToolsStatus, VideoAsset } from "../types";
 import { formatDimensions, formatDuration } from "../lib/format";
 
@@ -11,6 +11,7 @@ interface SidebarProps {
   onRemove: (path: string) => void;
   onImportFiles: () => void;
   onImportFolder: () => void;
+  onImportGifs: () => void;
 }
 
 function VideoItem({
@@ -75,6 +76,7 @@ export function Sidebar({
   onRemove,
   onImportFiles,
   onImportFolder,
+  onImportGifs,
 }: SidebarProps) {
   return (
     <aside className="sidebar">
@@ -98,6 +100,16 @@ export function Sidebar({
             <button
               type="button"
               className="icon-button"
+              onClick={onImportGifs}
+              disabled={importing}
+              aria-label="Import a GIF to edit"
+              title="Import a GIF to edit (⇧⌘G)"
+            >
+              <FileImage size={15} />
+            </button>
+            <button
+              type="button"
+              className="icon-button"
               onClick={onImportFolder}
               disabled={importing}
               aria-label="Import a folder"
@@ -107,14 +119,14 @@ export function Sidebar({
             </button>
           </div>
         </div>
-        <p className="library-subtitle">Your source clips, kept close by.</p>
+        <p className="library-subtitle">Your source clips and GIFs, kept close by.</p>
       </div>
 
       <div className="video-list">
         {importing && (
           <div className="importing-row">
             <LoaderCircle size={14} className="spin" />
-            <span>Scanning videos…</span>
+            <span>Reading your files…</span>
           </div>
         )}
 
@@ -124,7 +136,7 @@ export function Sidebar({
               <Film size={22} strokeWidth={1.35} />
             </div>
             <p>Nothing here yet.</p>
-            <span>Drop a video in, or add one with the buttons above.</span>
+            <span>Drop a video or GIF in, or add one with the buttons above.</span>
           </div>
         ) : (
           videos.map((video) => (

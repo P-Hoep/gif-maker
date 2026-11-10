@@ -8,7 +8,8 @@ Drop in one or more videos, trim the moment you want, choose how it plays, add a
 
 ## Features
 
-- **Import your way** — file picker (`⌘O`), folder picker (`⇧⌘O`), or drag and drop onto the window.
+- **Import your way** — file picker (`⌘O`), folder picker (`⇧⌘O`), GIF picker (`⇧⌘G`), or drag and drop onto the window.
+- **Edit existing GIFs** — import a GIF and Gifsmith converts it back into an editable clip, so you can trim it, change its playback, retitle it, and export a fresh GIF.
 - **Trim** — drag the round-trip handles or use `I` / `O` to set in and out points at the playhead.
 - **Forward, reverse, or boomerang** — reverse playback or play forward-then-back with one click.
 - **Title and credit text** — type a title and credit line, place them at the top or bottom, choose sans or serif, and pick a soft shadow or gradient scrim. A live preview shows the exact placement.

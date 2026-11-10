@@ -14,6 +14,9 @@ pub struct VideoAsset {
     pub codec: String,
     pub file_size: u64,
     pub thumbnail: Option<String>,
+    /// The original GIF this clip was converted from, so exports can default
+    /// to its name and folder instead of the temporary working copy.
+    pub origin_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -119,6 +122,10 @@ pub struct ExportRequest {
     pub trim_start: f64,
     #[serde(default)]
     pub trim_end: Option<f64>,
+    /// The source GIF for clips converted from a GIF. Used only to name and
+    /// place the exported file.
+    #[serde(default)]
+    pub origin_path: Option<String>,
     pub settings: AppSettings,
 }
 

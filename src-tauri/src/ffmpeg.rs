@@ -115,7 +115,11 @@ pub fn run_conversion(
         };
 
     let (out_width, out_height) = output_dimensions(&source, &settings);
-    let output_path = unique_output_path(&input, &settings)?;
+    let output_path = unique_output_path(
+        &input,
+        request.origin_path.as_deref().map(Path::new),
+        &settings,
+    )?;
     let temp_dir = tempfile::Builder::new()
         .prefix("gifsmith-export-")
         .tempdir()
@@ -457,22 +461,26 @@ fn run_ffmpeg(
     Ok(())
 }
 
-fn unique_output_path(input: &Path, settings: &AppSettings) -> Result<PathBuf, String> {
+/// Picks the output path. `origin` is the original GIF when the clip was
+/// converted from one, so exports keep the GIF's name and folder rather than
+/// the temporary working copy's.
+fn unique_output_path(
+    input: &Path,
+    origin: Option<&Path>,
+    settings: &AppSettings,
+) -> Result<PathBuf, String> {
+    let naming_source = origin.unwrap_or(input);
     let output_dir = settings
         .output_dir
         .as_ref()
         .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            input
-                .parent()
-                .map(Path::to_path_buf)
-                .unwrap_or_else(|| PathBuf::from("."))
-        });
+        .or_else(|| naming_source.parent().map(Path::to_path_buf))
+        .unwrap_or_else(|| PathBuf::from("."));
 
     fs::create_dir_all(&output_dir)
         .map_err(|error| format!("Couldn't open the output folder: {error}"))?;
 
-    let stem = safe_stem(input);
+    let stem = safe_stem(naming_source);
     let mut candidate = output_dir.join(format!("{stem}.gif"));
     let mut index = 2;
     while candidate.exists() {
@@ -583,6 +591,7 @@ mod tests {
             input_path: source.to_string_lossy().to_string(),
             trim_start: 0.1,
             trim_end: Some(1.0),
+            origin_path: None,
             settings: test_settings(output_dir),
         };
         let state = ExportState::default();

@@ -10,7 +10,7 @@ import type {
   ImportOutcome,
   ToolsStatus,
 } from "../types";
-import { DEFAULT_SETTINGS, VIDEO_FILTER } from "../types";
+import { DEFAULT_SETTINGS, GIF_FILTER, VIDEO_FILTER } from "../types";
 
 export const desktop = isTauri();
 
@@ -44,6 +44,13 @@ export async function importMedia(paths: string[]): Promise<ImportOutcome> {
   return invoke<ImportOutcome>("import_media", { paths });
 }
 
+export async function importGifs(paths: string[]): Promise<ImportOutcome> {
+  if (!desktop) {
+    return { videos: [], errors: ["Imports are only available in the desktop app."] };
+  }
+  return invoke<ImportOutcome>("import_gifs", { paths });
+}
+
 export async function chooseVideos(): Promise<string[]> {
   if (!desktop) return [];
   const result = await open({
@@ -52,6 +59,19 @@ export async function chooseVideos(): Promise<string[]> {
     multiple: true,
     directory: false,
     filters: [VIDEO_FILTER],
+  });
+  if (result === null) return [];
+  return Array.isArray(result) ? result : [result];
+}
+
+export async function chooseGifs(): Promise<string[]> {
+  if (!desktop) return [];
+  const result = await open({
+    title: "Import GIFs",
+    buttonLabel: "Import",
+    multiple: true,
+    directory: false,
+    filters: [GIF_FILTER],
   });
   if (result === null) return [];
   return Array.isArray(result) ? result : [result];

@@ -16,6 +16,8 @@ export interface VideoAsset {
   codec: string;
   fileSize: number;
   thumbnail: string | null;
+  /** The original GIF for clips that were imported from one. */
+  originPath: string | null;
 }
 
 export interface ImportOutcome {
@@ -58,6 +60,8 @@ export interface ExportRequest {
   inputPath: string;
   trimStart: number;
   trimEnd: number;
+  /** The original GIF for clips converted from one; guides the output name and folder. */
+  originPath?: string | null;
   settings: AppSettings;
 }
 
@@ -120,6 +124,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   typeface: "sans",
   textScale: 100,
   outputDir: null,
+};
+
+export const GIF_FILTER = {
+  name: "GIF images",
+  extensions: ["gif"],
 };
 
 export const VIDEO_FILTER = {

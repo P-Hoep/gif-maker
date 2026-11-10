@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Check,
   ExternalLink,
+  FileImage,
   Film,
   FolderOpen,
   LoaderCircle,
@@ -71,6 +72,7 @@ interface PreviewProps {
   onTrimChange: (trim: TrimRange) => void;
   onImportFiles: () => void;
   onImportFolder: () => void;
+  onImportGifs: () => void;
   onCancelExport: () => void;
   onRevealResult: () => void;
   onOpenResult: () => void;
@@ -296,11 +298,13 @@ function EmptyStage({
   tools,
   onImportFiles,
   onImportFolder,
+  onImportGifs,
 }: {
   importing: boolean;
   tools: ToolsStatus | null;
   onImportFiles: () => void;
   onImportFolder: () => void;
+  onImportGifs: () => void;
 }) {
   return (
     <div className="empty-stage">
@@ -347,6 +351,16 @@ function EmptyStage({
         <button
           type="button"
           className="button button-quiet"
+          onClick={onImportGifs}
+          disabled={importing}
+          title="Import a GIF to trim and re-export (⇧⌘G)"
+        >
+          <FileImage size={15} />
+          Import a GIF
+        </button>
+        <button
+          type="button"
+          className="button button-quiet"
           onClick={onImportFolder}
           disabled={importing}
         >
@@ -355,7 +369,7 @@ function EmptyStage({
         </button>
       </div>
 
-      <p className="empty-formats">MP4 · MOV · MKV · WebM · AVI · and more</p>
+      <p className="empty-formats">MP4 · MOV · MKV · WebM · AVI · GIF · and more</p>
 
       {tools && !tools.available && (
         <div className="empty-warning" role="status">
@@ -414,6 +428,7 @@ export function Preview({
   onTrimChange,
   onImportFiles,
   onImportFolder,
+  onImportGifs,
   onCancelExport,
   onRevealResult,
   onOpenResult,
@@ -697,6 +712,7 @@ export function Preview({
             tools={tools}
             onImportFiles={onImportFiles}
             onImportFolder={onImportFolder}
+            onImportGifs={onImportGifs}
           />
         )}
 

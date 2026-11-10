@@ -32,6 +32,24 @@ async fn import_media(paths: Vec<String>) -> Result<ImportOutcome, String> {
 }
 
 #[tauri::command]
+async fn import_gifs(app: AppHandle, paths: Vec<String>) -> Result<ImportOutcome, String> {
+    let cache_root = app
+        .path()
+        .app_cache_dir()
+        .map(|dir| dir.join("gif-imports"))
+        .unwrap_or_else(|_| std::env::temp_dir().join("gifsmith-gif-imports"));
+
+    match tauri::async_runtime::spawn_blocking(move || {
+        media::import_gif_paths(&paths, &cache_root)
+    })
+    .await
+    {
+        Ok(result) => result,
+        Err(error) => Err(format!("The GIF import stopped unexpectedly: {error}")),
+    }
+}
+
+#[tauri::command]
 async fn export_gif(app: AppHandle, request: ExportRequest) -> Result<ExportResult, String> {
     let app_handle = app.clone();
     match tauri::async_runtime::spawn_blocking(move || {
@@ -87,6 +105,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_tools,
             import_media,
+            import_gifs,
             export_gif,
             cancel_export,
             reveal_in_finder,

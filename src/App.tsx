@@ -5,6 +5,7 @@ import type {
   ActiveJob,
   AppSettings,
   ExportResult,
+  ImportOutcome,
   PreviewMode,
   SaveState,
   ToastItem,
@@ -18,9 +19,11 @@ import {
   cancelExport,
   checkTools,
   chooseFolder,
+  chooseGifs,
   chooseOutputFolder,
   chooseVideos,
   exportGif,
+  importGifs,
   importMedia,
   listenForDrops,
   listenForExportProgress,
@@ -43,6 +46,10 @@ import { ToastStack } from "./components/Toasts";
 
 const EXPORT_CANCELLED = "EXPORT_CANCELLED";
 const MIN_TRIM = 0.1;
+
+function isGifPath(path: string): boolean {
+  return /\.gif$/i.test(path);
+}
 
 const VISUAL_SETTING_KEYS = new Set<keyof AppSettings>([
   "playback",
@@ -285,6 +292,70 @@ export default function App() {
     }
   }, [runToolCheck, addToast]);
 
+  const applyImportOutcome = useCallback(
+    (outcome: ImportOutcome) => {
+      const incoming = outcome.videos;
+      const existingPaths = new Set(videosRef.current.map((video) => video.path));
+      const fresh = incoming.filter((video) => !existingPaths.has(video.path));
+
+      if (incoming.length > 0) {
+        setVideos((current) => {
+          const byPath = new Map(current.map((video) => [video.path, video]));
+          for (const video of incoming) byPath.set(video.path, video);
+          return Array.from(byPath.values());
+        });
+        setTrims((current) => {
+          const next = { ...current };
+          for (const video of incoming) {
+            if (!next[video.path]) next[video.path] = { start: 0, end: video.duration };
+          }
+          return next;
+        });
+        if (fresh.length > 0) {
+          setSelectedPath((current) => current ?? fresh[0].path);
+          const addedGifs = fresh.filter((video) => video.originPath).length;
+          addToast({
+            kind: "success",
+            title:
+              fresh.length === 1
+                ? fresh[0].originPath
+                  ? "GIF added"
+                  : "Clip added"
+                : addedGifs === fresh.length
+                  ? `${fresh.length} GIFs added`
+                  : `${fresh.length} clips added`,
+            detail: fresh.length === 1 ? fresh[0].fileName : "They’re ready in your library.",
+          });
+        } else {
+          addToast({
+            kind: "info",
+            title: "Already in your library",
+            detail:
+              incoming.length === 1 ? incoming[0].fileName : "Those clips were already here.",
+          });
+        }
+      }
+
+      if (outcome.errors.length > 0) {
+        addToast({
+          kind: "error",
+          title:
+            outcome.videos.length > 0
+              ? "Some files couldn’t be imported"
+              : "Couldn’t import those files",
+          detail: importErrorDetail(outcome.errors),
+        });
+      } else if (incoming.length === 0) {
+        addToast({
+          kind: "info",
+          title: "No clips found",
+          detail: "Choose a supported video or GIF file, or a folder that contains one.",
+        });
+      }
+    },
+    [addToast],
+  );
+
   const importPaths = useCallback(
     async (paths: string[]) => {
       if (paths.length === 0) return;
@@ -301,73 +372,39 @@ export default function App() {
       importingRef.current = true;
       setImporting(true);
       try {
-        const outcome = await importMedia(paths);
-        const incoming = outcome.videos;
-        const existingPaths = new Set(videosRef.current.map((video) => video.path));
-        const fresh = incoming.filter((video) => !existingPaths.has(video.path));
+        const gifPaths = paths.filter(isGifPath);
+        const videoPaths = paths.filter((path) => !isGifPath(path));
 
-        if (incoming.length > 0) {
-          setVideos((current) => {
-            const byPath = new Map(current.map((video) => [video.path, video]));
-            for (const video of incoming) byPath.set(video.path, video);
-            return Array.from(byPath.values());
-          });
-          setTrims((current) => {
-            const next = { ...current };
-            for (const video of incoming) {
-              if (!next[video.path]) next[video.path] = { start: 0, end: video.duration };
-            }
-            return next;
-          });
-          if (fresh.length > 0) {
-            setSelectedPath((current) => current ?? fresh[0].path);
+        if (videoPaths.length > 0) {
+          try {
+            applyImportOutcome(await importMedia(videoPaths));
+          } catch (error) {
             addToast({
-              kind: "success",
-              title: fresh.length === 1 ? "Clip added" : `${fresh.length} clips added`,
-              detail:
-                fresh.length === 1
-                  ? fresh[0].fileName
-                  : "They’re ready in your library.",
-            });
-          } else {
-            addToast({
-              kind: "info",
-              title: "Already in your library",
-              detail:
-                incoming.length === 1 ? incoming[0].fileName : "Those clips were already here.",
+              kind: "error",
+              title: "Import failed",
+              detail: conciseError(error),
             });
           }
         }
 
-        if (outcome.errors.length > 0) {
-          addToast({
-            kind: "error",
-            title:
-              outcome.videos.length > 0
-                ? "Some files couldn’t be imported"
-                : "Couldn’t import those files",
-            detail: importErrorDetail(outcome.errors),
-          });
-        } else if (incoming.length === 0) {
-          addToast({
-            kind: "info",
-            title: "No videos found",
-            detail: "Choose a supported video file or a folder that contains one.",
-          });
+        if (gifPaths.length > 0) {
+          try {
+            applyImportOutcome(await importGifs(gifPaths));
+          } catch (error) {
+            addToast({
+              kind: "error",
+              title: "Couldn’t import those GIFs",
+              detail: conciseError(error),
+            });
+          }
         }
-      } catch (error) {
-        addToast({
-          kind: "error",
-          title: "Import failed",
-          detail: conciseError(error),
-        });
       } finally {
         importingRef.current = false;
         setImporting(false);
         setDropActive(false);
       }
     },
-    [addToast],
+    [addToast, applyImportOutcome],
   );
 
   const importPathsRef = useRef(importPaths);
@@ -404,6 +441,24 @@ export default function App() {
       addToast({
         kind: "error",
         title: "Couldn’t open the folder picker",
+        detail: conciseError(error),
+      });
+    }
+  }, [addToast]);
+
+  const handleImportGifs = useCallback(async () => {
+    if (activeJobRef.current) {
+      addToast({ kind: "info", title: "Export in progress" });
+      return;
+    }
+    if (importingRef.current) return;
+    try {
+      const paths = await chooseGifs();
+      if (paths.length > 0) await importPathsRef.current(paths);
+    } catch (error) {
+      addToast({
+        kind: "error",
+        title: "Couldn’t open the file picker",
         detail: conciseError(error),
       });
     }
@@ -591,6 +646,7 @@ export default function App() {
         inputPath,
         trimStart: currentTrim.start,
         trimEnd: currentTrim.end,
+        originPath: selectedVideo.originPath,
         settings,
       });
       setResults((current) => ({ ...current, [inputPath]: exported }));
@@ -672,6 +728,11 @@ export default function App() {
         else void handleImportFiles();
         return;
       }
+      if (command && event.shiftKey && event.key.toLowerCase() === "g") {
+        event.preventDefault();
+        void handleImportGifs();
+        return;
+      }
       if (command && event.key === "Enter") {
         event.preventDefault();
         void handleExport();
@@ -684,7 +745,7 @@ export default function App() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleImportFolder, handleImportFiles, handleExport, handleCancelExport]);
+  }, [handleImportFolder, handleImportFiles, handleImportGifs, handleExport, handleCancelExport]);
 
   return (
     <div className="app-shell">
@@ -700,6 +761,7 @@ export default function App() {
           onRemove={handleRemoveVideo}
           onImportFiles={() => void handleImportFiles()}
           onImportFolder={() => void handleImportFolder()}
+          onImportGifs={() => void handleImportGifs()}
         />
 
         <main className="workspace">
@@ -716,6 +778,7 @@ export default function App() {
             onTrimChange={handleTrimChange}
             onImportFiles={() => void handleImportFiles()}
             onImportFolder={() => void handleImportFolder()}
+            onImportGifs={() => void handleImportGifs()}
             onCancelExport={() => void handleCancelExport()}
             onRevealResult={() => void handleRevealResult()}
             onOpenResult={() => void handleOpenResult()}
@@ -747,7 +810,7 @@ export default function App() {
               <Download size={24} />
             </span>
             <strong>Drop to add to your library</strong>
-            <span>Videos or folders — we’ll take it from here.</span>
+            <span>Videos, GIFs, or folders — we’ll take it from here.</span>
           </div>
         </div>
       )}
